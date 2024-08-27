@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: line-bot-thingspeak
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        value: <your-line-channel-access-token>
+      - key: LINE_CHANNEL_SECRET_KEY
+        value: <your-line-channel-secret-key>
+      - key: AUTH_USER_LIST
+        value: <your-auth-user-list>
+      - key: IMGUR_CLIENT_ID
+        value: <your-imgur-client-id>
+
+
+

@@ -1,15 +1,15 @@
+from flask import Flask, request, abort
+from linebot import (
+    LineBotApi, WebhookHandler
+)
+from linebot.exceptions import (
+    InvalidSignatureError
+)
+from linebot.models import *
 import os
 import openai
 import traceback
-from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import *
 from thingspeak import Thingspeak
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
 
 app = Flask(__name__, static_folder="./static", static_url_path="/static")
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
@@ -28,7 +28,7 @@ auth_user_ai_list = ["U39b3f15d09b42fbd028e5689156a49e1"]  # 允許使用AI功�
 # 用戶對話歷史
 user_conversations = {}
 
-# 心臟衰竭相關數據
+# 模擬心臟衰竭相關數據
 heart_failure_data = {
     "屬性資訊": [
         "年齡", "性別", "心臟病史", "高血壓", "糖尿病", "吸煙史", "肥胖"
@@ -53,23 +53,12 @@ heart_failure_data = {
     ]
 }
 
-# 讀取Excel文件
-heart_data = pd.read_excel('heart.xlsx')
-heart_disease_prediction_data = pd.read_excel('Heart_Disease_Prediction.xlsx')
-
-# 準備心臟病預測模型
-X = heart_disease_prediction_data.drop('HeartDisease', axis=1)
-y = heart_disease_prediction_data['HeartDisease']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-rf_model.fit(X_train, y_train)
-
 def GPT_response(text):
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "你是一個醫療助手，專門回答關於心臟衰竭和心臟病的問題。使用提供的心臟衰竭數據和Excel文件中的數據來回答問題。"},
+                {"role": "system", "content": "你是一個醫療助手，專門回答關於心臟衰竭的問題。使用提供的心臟衰竭數據來回答問題。"},
                 {"role": "user", "content": text}
             ],
             temperature=0.7,
@@ -82,11 +71,10 @@ def GPT_response(text):
         return "對不起，我無法處理你的請求。"
 
 def process_heart_failure_query(query):
-    response = "根據心臟衰竭相關數據和Excel文件：\n\n"
+    response = "根據心臟衰竭相關數據：\n\n"
     
     if "屬性" in query or "資訊" in query:
         response += "相關屬性資訊包括：\n" + "\n".join(f"- {attr}" for attr in heart_failure_data["屬性資訊"])
-        response += "\n\n在Excel文件中的屬性：\n" + ", ".join(heart_data.columns.tolist())
     
     if "發病條件" in query or "心臟衰竭條件" in query:
         response += "\n\n心臟衰竭的發病條件包括：\n" + "\n".join(f"- {cond}" for cond in heart_failure_data["發病條件"])
@@ -97,18 +85,7 @@ def process_heart_failure_query(query):
     if "心臟衰竭標準" in query:
         response += "\n\n心臟衰竭標準：\n" + "\n".join(f"- {std}" for std in heart_failure_data["心臟衰竭標準"])
     
-    if "統計" in query:
-        response += f"\n\n根據Excel數據，平均年齡為：{heart_data['Age'].mean():.2f}歲"
-        response += f"\n男性比例：{(heart_data['Sex'] == 1).mean():.2%}"
-        response += f"\n患有心臟病的比例：{(heart_data['HeartDisease'] == 1).mean():.2%}"
-    
     return response
-
-def predict_heart_disease(age, sex, chest_pain_type, resting_bp, cholesterol, fasting_bs, resting_ecg, max_hr, exercise_angina, oldpeak, st_slope):
-    input_data = np.array([[age, sex, chest_pain_type, resting_bp, cholesterol, fasting_bs, resting_ecg, max_hr, exercise_angina, oldpeak, st_slope]])
-    prediction = rf_model.predict(input_data)
-    probability = rf_model.predict_proba(input_data)[0][1]
-    return prediction[0], probability
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -130,8 +107,36 @@ def handle_message(event):
     
     if user_id in auth_user_list:
         if check == "圖表:":
-            # 圖表處理邏輯保持不變
-            pass
+            try:
+                parts = user_msg.split(',')
+                if len(parts) != 3:
+                    raise ValueError("輸入格式錯誤。請使用正確格式，例如: '圖表:2466473,GROLYCVTU08JWN8Q,field1'")
+                
+                channel_id, key, field = parts
+                print("用戶 channel_id: ", channel_id, "Read_key: ", key, "Field: ", field)
+                
+                if field not in ['field1', 'field2', 'field3', 'field4', 'field5']:
+                    raise ValueError("無效的 field 識別符。請使用 'field1', 'field2', 'field3', 'field4', 或 'field5'。")
+                
+                ts = Thingspeak()
+                result = ts.process_and_upload_field(channel_id, key, field)
+                
+                if result == 'Not Found':
+                    message = TextSendMessage(text="數據未找到或無法處理請求。")
+                elif result == 'Invalid Field':
+                    message = TextSendMessage(text="無效的 field 識別符。請使用 'field1', 'field2', 'field3', 'field4', 或 'field5'。")
+                else:
+                    image_path = result['image_path']
+                    image_url = f"https://{request.host}/static/{os.path.basename(image_path)}"
+                    image_message = ImageSendMessage(
+                        original_content_url=image_url,
+                        preview_image_url=image_url
+                    )
+                    line_bot_api.reply_message(event.reply_token, image_message)
+            except Exception as e:
+                print(f"處理圖表請求時錯誤: {e}")
+                message = TextSendMessage(text=f"處理圖表請求時出現問題: {str(e)}")
+                line_bot_api.reply_message(event.reply_token, message)
         
         elif check == 'ai:' and user_id in auth_user_ai_list:
             try:
@@ -140,12 +145,8 @@ def handle_message(event):
 
                 user_conversations[user_id] += user_msg + " "
 
-                if "心臟衰竭" in user_msg or "心臟病" in user_msg:
+                if "心臟衰竭" in user_msg:
                     response = process_heart_failure_query(user_msg)
-                elif "預測" in user_msg:
-                    # 這裡應該解析用戶輸入的預測數據，為了簡化，我們使用固定值
-                    prediction, probability = predict_heart_disease(40, 1, 1, 120, 200, 0, 0, 150, 0, 1.5, 1)
-                    response = f"心臟病預測結果：{'陽性' if prediction == 1 else '陰性'}，概率：{probability:.2%}"
                 else:
                     response = GPT_response(user_conversations[user_id])
 

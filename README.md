@@ -120,3 +120,11 @@ Python
 用戶提出疑問或需求。
 
 助理提供回答。
+
+
+實際輸入
+![image](https://github.com/user-attachments/assets/e3e99a5b-59fa-4390-8fb8-f2154d587d47)
+![image](https://github.com/user-attachments/assets/d1870f79-3281-487d-97e2-38e28bcd1cfb)
+
+
+

@@ -45,9 +45,9 @@ ChatGPT 說：
 程序中如何運作2.程序中如何運作
 程呼叫中在我們的專案中，這些角色的運作存在於OpenAI的ChatCompletion.create呼叫中。
 
-Python
 
-複製
+
+
 response = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",  # 使用的模型
     messages=[  # 這裡是聊天訊息的列表，包含 system、user 和 assistant 角色的訊息
@@ -60,18 +60,14 @@ response = openai.ChatCompletion.create(
 系統角色（system）在這個程式中，系統角色用來設定整體的對情境和指揮AI的回應例如：​：
 在這個過程中，系統角色用來設定整個系統的針對情境和指揮AI的反應邏輯。
 
-Python
 
-複製
 {"role": "system", "content": "你是一個醫療助手，專門回答關於心臟衰竭的問題。使用提供的心臟衰竭數據來回答問題。"}
 這個AI，無用戶問題什麼問題，都應該依 據心臟地帶執行相關的理由回答，並扮演一個醫療助手角色。
 
 使用者角色（使用者）：
 這是由使用者向機器發出詢問的部分text。
 
-Python
 
-複製
 {"role": "user", "content": text}
 該計劃旨在透過 GPT 模型實現對特定物件的訪問，從而實現對特定物件的存取。
 
@@ -83,27 +79,19 @@ Python
 3.具體例子
 假設備使用者提出了一個有關核心職能的問題：
 
-Python
 
-複製
 query = "心臟衰竭的發病條件是什麼？"
 系統角色：首先，系統角色設定針對的主題與規劃原則：
 
-Python
 
-複製
 {"role": "system", "content": "你是一個醫療助手，專門回答關於心臟衰竭的問題。使用提供的心臟衰竭數據來回答問題。"}
 使用者的角色：當然，使用者發出的問題：
 
-Python
 
-複製
 {"role": "user", "content": "心臟衰竭的發病條件是什麼？"}
 助理角色：根據這些輸入，AI會產生一個答案（例如）：
 
-Python
 
-複製
 {"role": "assistant", "content": "心臟衰竭的發病條件包括：...（具體條件的列表）"}
 4.為什麼我要使用這個角色？
 清晰的物件結構：使用這些角色可以幫助模型更好地理解物件的背景，並可以根據上下文為其提供合適的回報。
